@@ -1,0 +1,19 @@
+{
+  "name": "sloc-api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "micro",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Gerhard Preuss",
+  "license": "MIT",
+  "dependencies": {
+    "micro": "^7.3.3",
+    "nodegit": "^0.18.3",
+    "rimraf": "^2.6.1",
+    "sloc": "^0.2.0",
+    "uuid": "^3.1.0"
+  }
+}
