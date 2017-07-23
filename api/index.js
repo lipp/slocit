@@ -1,15 +1,28 @@
 const {parse} = require('url')
-const {Clone} = require('nodegit')
 const {join} = require('path')
 const {promisify} = require('util')
 const exec = promisify(require('child_process').exec)
 const rimraf = promisify(require('rimraf'))
+const readFile = promisify(require('fs').readFile)
 const uuid = require('uuid')
 
+const clone = async ({user, repo, branch}, dir) => {
+  await exec(`git clone https://github.com/${user}/${repo} ${dir} --depth 1 --branch ${branch} -q`)
+  await exec(`cd ${dir} && git checkout ${branch}`)
+  const {stdout} = await exec(`cd ${dir} && git rev-parse HEAD`)
+  return stdout.trim()
+}
+
 const sloc = async dir => {
+  const tmpPath = uuid.v1()
   const slocPath = join(__dirname, 'node_modules', '.bin', 'sloc')
-  const {stdout} = await exec(`${slocPath} ${dir} -f json`)
-  return JSON.parse(stdout)
+  try {
+    await exec(`${slocPath} ${dir} -f json > ${tmpPath}`)
+    const result = await readFile(tmpPath)
+    return JSON.parse(result)
+  } finally {
+    await rimraf(tmpPath)
+  }
 }
 
 const processRepo = async dir => {
@@ -33,18 +46,18 @@ const repoFromUrl = url => {
 module.exports = async (req, res) => {
   const tStart = Date.now()
   try {
-    const {user, repo, branch} = repoFromUrl(req.url)
     const path = join(__dirname, uuid.v1())
-    await Clone(`https://github.com/${user}/${repo}`, path, {checkoutBranch: branch})
+    const hash = await clone(repoFromUrl(req.url), path)
     const result = await processRepo(path)
     await rimraf(path)
     return {
       result,
+      hash,
       dt: Date.now() - tStart
     }
   } catch (err) {
     return {
-      error: err,
+      error: err.toString(),
       dt: Date.now() - tStart      
     }
   }
